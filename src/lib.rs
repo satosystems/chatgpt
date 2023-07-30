@@ -106,6 +106,28 @@ pub mod ll {
         transfer.perform()?;
         Ok(())
     }
+
+    pub async fn completions<F>(
+        api_key: &str,
+        request_body: &super::RequestBody,
+        f: F,
+    ) -> Result<(), super::Error>
+    where
+        F: Fn(&[u8]),
+    {
+        let string_body = serde_json::to_string(request_body)?;
+        let mut easy =
+            super::internal::init(api_key, "https://api.openai.com/v1/chat/completions")?;
+        easy.post(true)?;
+        easy.post_fields_copy(string_body.as_bytes())?;
+        let mut transfer = easy.transfer();
+        transfer.write_function(|data| {
+            f(data);
+            Ok(data.len())
+        })?;
+        transfer.perform()?;
+        Ok(())
+    }
 }
 
 pub mod hl {
