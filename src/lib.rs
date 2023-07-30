@@ -24,6 +24,23 @@ mod internal {
     }
 }
 
+pub mod ll {
+    pub async fn list_models<F>(api_key: &str, f: F) -> Result<(), super::Error>
+    where
+        F: Fn(&[u8]),
+    {
+        let mut easy = super::internal::init(api_key, "https://api.openai.com/v1/models")?;
+        easy.get(true)?;
+        let mut transfer = easy.transfer();
+        transfer.write_function(|data| {
+            f(data);
+            Ok(data.len())
+        })?;
+        transfer.perform()?;
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     #[test]
