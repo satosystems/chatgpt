@@ -1,4 +1,11 @@
 #[derive(Debug, PartialEq)]
+pub enum CallbackReason {
+    Start,
+    Data,
+    End,
+}
+
+#[derive(Debug, PartialEq)]
 pub enum Error {
     CurlError(curl::Error),
     FromUtf8Error(std::string::FromUtf8Error),
@@ -74,6 +81,22 @@ pub struct RequestBody {
     pub stream: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub user: Option<String>,
+}
+
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
+pub struct Choice {
+    pub index: u64,
+    pub delta: Message,
+    pub finish_reason: Option<String>,
+}
+
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
+pub struct Completion {
+    pub id: String,
+    pub object: String,
+    pub created: u64,
+    pub model: String,
+    pub choices: Vec<Choice>,
 }
 
 mod internal {
