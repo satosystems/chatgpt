@@ -142,6 +142,21 @@ pub mod hl {
         let v = amv.lock().unwrap().clone();
         Ok(String::from_utf8(v)?)
     }
+
+    pub async fn completions<F>(
+        api_key: &str,
+        request_body: &super::RequestBody,
+        f: F,
+    ) -> Result<(), super::Error>
+    where
+        F: Fn(String),
+    {
+        super::ll::completions(&api_key, request_body, |data| {
+            f(String::from_utf8(data.to_vec()).unwrap());
+        })
+        .await?;
+        Ok(())
+    }
 }
 
 pub async fn list_models(api_key: &str) -> Result<Vec<ModelList>, Error> {
