@@ -187,6 +187,42 @@ pub async fn list_models(api_key: &str) -> Result<Vec<ModelList>, Error> {
     Ok(serde_json::from_str(&json)?)
 }
 
+pub async fn completions<F>(api_key: &str, request_body: &RequestBody, f: F) -> Result<(), Error>
+where
+    F: Fn(CallbackReason, Completion),
+{
+    hl::completions(&api_key, request_body, |data| {
+        let is_debug = std::env::var("OPENAI_DEBUG").unwrap_or(String::from("")) != "";
+        data.lines().for_each(|line| {
+            let prefix = "data: {";
+            let prefix_len = prefix.len();
+            if line.starts_with(prefix) {
+                let string_json = match line.char_indices().nth(prefix_len - 1) {
+                    Some((i, _)) => &line[i..],
+                    None => "",
+                };
+                if is_debug {
+                    std::io::Write::write_all(
+                        &mut std::io::stderr(),
+                        format!("{}\n", string_json).as_bytes(),
+                    )
+                    .unwrap();
+                }
+                let completion: Completion = serde_json::from_str(string_json).unwrap();
+                if completion.choices[0].delta.role == Some(String::from("assistant")) {
+                    f(CallbackReason::Start, completion);
+                } else if completion.choices[0].finish_reason == Some(String::from("stop")) {
+                    f(CallbackReason::End, completion);
+                } else {
+                    f(CallbackReason::Data, completion);
+                }
+            }
+        });
+    })
+    .await?;
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     #[test]
