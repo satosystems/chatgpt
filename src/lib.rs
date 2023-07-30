@@ -78,4 +78,12 @@ mod tests {
         let result = futures::executor::block_on(future);
         assert!(result.is_ok());
     }
+
+    #[test]
+    fn hl_list_models() {
+        let api_key = std::env::var("OPENAI_API_KEY").expect("OPENAI_API_KEY is not defined");
+        let future = crate::hl::list_models(&api_key);
+        let result = futures::executor::block_on(future);
+        assert!(result.is_ok());
+    }
 }
