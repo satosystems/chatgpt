@@ -23,3 +23,13 @@ mod internal {
         Ok(easy)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn init_handle() {
+        let api_key = std::env::var("OPENAI_API_KEY").expect("OPENAI_API_KEY is not defined");
+        let result = crate::internal::init(&api_key, "https://api.openai.com/v1/models");
+        assert!(result.is_ok());
+    }
+}
