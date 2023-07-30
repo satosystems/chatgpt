@@ -173,4 +173,22 @@ mod tests {
         let result = futures::executor::block_on(future);
         assert!(result.is_ok());
     }
+
+    #[test]
+    fn ll_completions() {
+        let api_key = std::env::var("OPENAI_API_KEY").expect("OPENAI_API_KEY is not defined");
+        let request_body = super::RequestBody {
+            model: String::from("gpt-3.5-turbo"),
+            messages: vec![super::Message {
+                role: Some(String::from("user")),
+                content: Some(String::from("Say hello")),
+            }],
+            temperature: None,
+            stream: Some(true),
+            user: None,
+        };
+        let future = super::ll::completions(&api_key, &request_body, |_| {});
+        let result = futures::executor::block_on(future);
+        assert!(result.is_ok());
+    }
 }
