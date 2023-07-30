@@ -49,4 +49,12 @@ mod tests {
         let result = crate::internal::init(&api_key, "https://api.openai.com/v1/models");
         assert!(result.is_ok());
     }
+
+    #[test]
+    fn ll_list_models() {
+        let api_key = std::env::var("OPENAI_API_KEY").expect("OPENAI_API_KEY is not defined");
+        let future = crate::ll::list_models(&api_key, |_| {});
+        let result = futures::executor::block_on(future);
+        assert!(result.is_ok());
+    }
 }
