@@ -1,11 +1,18 @@
 #[derive(Debug, PartialEq)]
 pub enum Error {
     CurlError(curl::Error),
+    FromUtf8Error(std::string::FromUtf8Error),
 }
 
 impl From<curl::Error> for Error {
     fn from(err: curl::Error) -> Self {
         Self::CurlError(err)
+    }
+}
+
+impl From<std::string::FromUtf8Error> for Error {
+    fn from(err: std::string::FromUtf8Error) -> Self {
+        Self::FromUtf8Error(err)
     }
 }
 
@@ -38,6 +45,20 @@ pub mod ll {
         })?;
         transfer.perform()?;
         Ok(())
+    }
+}
+
+pub mod hl {
+    pub async fn list_models(api_key: &str) -> Result<String, super::Error> {
+        let amv = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+        let cloned_amv = amv.clone();
+        super::ll::list_models(&api_key, move |data| {
+            let mut v = cloned_amv.lock().unwrap();
+            v.extend_from_slice(data)
+        })
+        .await?;
+        let v = amv.lock().unwrap().clone();
+        Ok(String::from_utf8(v)?)
     }
 }
 
