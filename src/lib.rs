@@ -2,6 +2,7 @@
 pub enum Error {
     CurlError(curl::Error),
     FromUtf8Error(std::string::FromUtf8Error),
+    SerdeJsonError(String),
 }
 
 impl From<curl::Error> for Error {
@@ -14,6 +15,65 @@ impl From<std::string::FromUtf8Error> for Error {
     fn from(err: std::string::FromUtf8Error) -> Self {
         Self::FromUtf8Error(err)
     }
+}
+
+impl From<serde_json::Error> for Error {
+    fn from(err: serde_json::Error) -> Self {
+        Self::SerdeJsonError(err.to_string())
+    }
+}
+
+#[derive(Debug, serde::Deserialize)]
+pub struct Permission {
+    pub id: String,
+    pub object: String,
+    pub created: u64,
+    pub allow_create_engine: bool,
+    pub allow_sampling: bool,
+    pub allow_logprobs: bool,
+    pub allow_search_indices: bool,
+    pub allow_view: bool,
+    pub allow_fine_tuning: bool,
+    pub organization: String,
+    pub group: serde_json::Value,
+    pub is_blocking: bool,
+}
+
+#[derive(Debug, serde::Deserialize)]
+pub struct Model {
+    pub id: String,
+    pub object: String,
+    pub created: u64,
+    pub owned_by: String,
+    pub permission: Vec<Permission>,
+    pub root: String,
+    pub parent: Option<String>,
+}
+
+#[derive(Debug, serde::Deserialize)]
+pub struct ModelList {
+    pub object: String,
+    pub data: Vec<Model>,
+}
+
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
+pub struct Message {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub role: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub content: Option<String>,
+}
+
+#[derive(Debug, serde::Serialize)]
+pub struct RequestBody {
+    pub model: String,
+    pub messages: Vec<Message>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub temperature: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stream: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub user: Option<String>,
 }
 
 mod internal {
@@ -60,6 +120,11 @@ pub mod hl {
         let v = amv.lock().unwrap().clone();
         Ok(String::from_utf8(v)?)
     }
+}
+
+pub async fn list_models(api_key: &str) -> Result<Vec<ModelList>, Error> {
+    let json = hl::list_models(api_key).await?;
+    Ok(serde_json::from_str(&json)?)
 }
 
 #[cfg(test)]
