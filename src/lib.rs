@@ -229,4 +229,47 @@ mod tests {
         let result = futures::executor::block_on(future);
         assert!(result.is_ok());
     }
+
+    #[test]
+    fn hl_completions() {
+        let api_key = std::env::var("OPENAI_API_KEY").expect("OPENAI_API_KEY is not defined");
+        let request_body = super::RequestBody {
+            model: String::from("gpt-3.5-turbo"),
+            messages: vec![super::Message {
+                role: Some(String::from("user")),
+                content: Some(String::from("Say hello")),
+            }],
+            temperature: None,
+            stream: Some(true),
+            user: None,
+        };
+        let count_start = std::cell::Cell::new(0);
+        let count_data = std::cell::Cell::new(0);
+        let count_end = std::cell::Cell::new(0);
+        let future = super::hl::completions(&api_key, &request_body, |data| {
+            data.lines().for_each(|line| {
+                let prefix = "data: {";
+                let prefix_len = prefix.len();
+                if line.starts_with(prefix) {
+                    let string_json = match line.char_indices().nth(prefix_len - 1) {
+                        Some((i, _)) => &line[i..],
+                        None => "",
+                    };
+                    let completion: super::Completion = serde_json::from_str(string_json).unwrap();
+                    if completion.choices[0].delta.role == Some(String::from("assistant")) {
+                        count_start.set(count_start.get() + 1);
+                    } else if completion.choices[0].finish_reason == Some(String::from("stop")) {
+                        count_end.set(count_end.get() + 1);
+                    } else {
+                        count_data.set(count_data.get() + 1);
+                    }
+                }
+            });
+        });
+        let result = futures::executor::block_on(future);
+        assert!(result.is_ok());
+        assert_eq!(count_start.get(), 1);
+        assert!(count_data.get() > 0);
+        assert_eq!(count_end.get(), 1);
+    }
 }
