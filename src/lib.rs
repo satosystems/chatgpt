@@ -308,4 +308,41 @@ mod tests {
         assert!(count_data.get() > 0);
         assert_eq!(count_end.get(), 1);
     }
+
+    #[test]
+    fn completions() {
+        let api_key = std::env::var("OPENAI_API_KEY").expect("OPENAI_API_KEY is not defined");
+        let request_body = super::RequestBody {
+            model: String::from("gpt-3.5-turbo"),
+            messages: vec![super::Message {
+                role: Some(String::from("user")),
+                content: Some(String::from("Say hello")),
+            }],
+            temperature: None,
+            stream: Some(true),
+            user: None,
+        };
+        let count_start = std::cell::Cell::new(0);
+        let count_data = std::cell::Cell::new(0);
+        let count_end = std::cell::Cell::new(0);
+        let future = super::completions(&api_key, &request_body, |cr, completion| match cr {
+            super::CallbackReason::Start => {
+                count_start.set(count_start.get() + 1);
+                assert_eq!(completion.choices.len(), 1);
+            }
+            super::CallbackReason::Data => {
+                count_data.set(count_data.get() + 1);
+                assert_eq!(completion.choices.len(), 1);
+            }
+            super::CallbackReason::End => {
+                count_end.set(count_end.get() + 1);
+                assert_eq!(completion.choices.len(), 1);
+            }
+        });
+        let result = futures::executor::block_on(future);
+        assert!(result.is_ok());
+        assert_eq!(count_start.get(), 1);
+        assert!(count_data.get() > 0);
+        assert_eq!(count_end.get(), 1);
+    }
 }
