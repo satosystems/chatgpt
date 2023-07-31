@@ -63,7 +63,7 @@ pub struct ModelList {
     pub data: Vec<Model>,
 }
 
-#[derive(Debug, serde::Deserialize, serde::Serialize)]
+#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
 pub struct Message {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub role: Option<String>,
@@ -71,7 +71,7 @@ pub struct Message {
     pub content: Option<String>,
 }
 
-#[derive(Debug, serde::Serialize)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct RequestBody {
     pub model: String,
     pub messages: Vec<Message>,
