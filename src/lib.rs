@@ -202,11 +202,7 @@ where
                     None => "",
                 };
                 if is_debug {
-                    std::io::Write::write_all(
-                        &mut std::io::stderr(),
-                        format!("{}\n", string_json).as_bytes(),
-                    )
-                    .unwrap();
+                    eprintln!("{}", string_json);
                 }
                 let completion: Completion = serde_json::from_str(string_json).unwrap();
                 if completion.choices[0].delta.role == Some(String::from("assistant")) {
