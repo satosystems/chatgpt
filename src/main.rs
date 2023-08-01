@@ -7,16 +7,32 @@ struct Options {
     #[arg(short, long, default_value = "gpt-3.5-turbo")]
     model: String,
 
+    #[arg(short, long, default_value = None)]
+    temperature: Option<f64>,
+
+    #[arg(short, long)]
+    no_stream: bool,
+
+    #[arg(short, long, default_value = None)]
+    user: Option<String>,
+
     args: Option<Vec<String>>,
 }
 
-fn request(api_key: &str, model: String, messages: Vec<chatgpt::Message>) -> String {
+fn request(
+    api_key: &str,
+    model: String,
+    temperature: Option<f64>,
+    stream: Option<bool>,
+    user: Option<String>,
+    messages: Vec<chatgpt::Message>,
+) -> String {
     let request_body = chatgpt::RequestBody {
         model,
         messages,
-        temperature: None,
-        stream: Some(true),
-        user: None,
+        temperature,
+        stream,
+        user,
     };
     let contents = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
     let future = chatgpt::completions(&api_key, &request_body, |cr, completion| {
@@ -49,7 +65,14 @@ fn main() {
             role: Some(String::from("user")),
             content: Some(args.join(" ")),
         });
-        let reply = request(&api_key, options.model.clone(), messages.clone());
+        let reply = request(
+            &api_key,
+            options.model.clone(),
+            options.temperature.clone(),
+            if options.no_stream { None } else { Some(true) },
+            options.user.clone(),
+            messages.clone(),
+        );
         messages.push(chatgpt::Message {
             role: Some(String::from("system")),
             content: Some(reply),
@@ -68,7 +91,14 @@ fn main() {
                     role: Some(String::from("user")),
                     content: Some(line),
                 });
-                let reply = request(&api_key, options.model.clone(), messages.clone());
+                let reply = request(
+                    &api_key,
+                    options.model.clone(),
+                    options.temperature.clone(),
+                    if options.no_stream { None } else { Some(true) },
+                    options.user.clone(),
+                    messages.clone(),
+                );
                 messages.push(chatgpt::Message {
                     role: Some(String::from("system")),
                     content: Some(reply),
