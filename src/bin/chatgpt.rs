@@ -25,9 +25,9 @@ fn request(
     temperature: Option<f64>,
     stream: Option<bool>,
     user: Option<String>,
-    messages: Vec<chatgpt::Message>,
+    messages: Vec<simple_chatgpt::Message>,
 ) -> String {
-    let request_body = chatgpt::RequestBody {
+    let request_body = simple_chatgpt::RequestBody {
         model,
         messages,
         temperature,
@@ -35,11 +35,11 @@ fn request(
         user,
     };
     let contents = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
-    let future = chatgpt::completions(&api_key, &request_body, |cr, completion| match cr {
-        chatgpt::CallbackReason::Start => {
+    let future = simple_chatgpt::completions(&api_key, &request_body, |cr, completion| match cr {
+        simple_chatgpt::CallbackReason::Start => {
             // nothing to do
         }
-        chatgpt::CallbackReason::Data => {
+        simple_chatgpt::CallbackReason::Data => {
             let stdout = std::io::stdout();
             let mut handle = stdout.lock();
             let content = completion.unwrap().choices[0]
@@ -52,10 +52,10 @@ fn request(
             std::io::Write::flush(&mut handle).unwrap();
             contents.borrow_mut().push_str(&content);
         }
-        chatgpt::CallbackReason::End => {
+        simple_chatgpt::CallbackReason::End => {
             println!();
         }
-        chatgpt::CallbackReason::Error(line) => {
+        simple_chatgpt::CallbackReason::Error(line) => {
             eprintln!("{}", line);
         }
     });
@@ -72,7 +72,7 @@ fn main() {
     let api_key = std::env::var("OPENAI_API_KEY").expect("OPENAI_API_KEY is not defined");
     let mut messages = Vec::new();
     if let Some(args) = options.args {
-        messages.push(chatgpt::Message {
+        messages.push(simple_chatgpt::Message {
             role: Some(String::from("user")),
             content: Some(args.join(" ")),
         });
@@ -84,7 +84,7 @@ fn main() {
             options.user.clone(),
             messages.clone(),
         );
-        messages.push(chatgpt::Message {
+        messages.push(simple_chatgpt::Message {
             role: Some(String::from("system")),
             content: Some(reply),
         });
@@ -98,7 +98,7 @@ fn main() {
         match readline {
             Ok(line) => {
                 let _ = rl.add_history_entry(line.clone());
-                messages.push(chatgpt::Message {
+                messages.push(simple_chatgpt::Message {
                     role: Some(String::from("user")),
                     content: Some(line),
                 });
@@ -110,7 +110,7 @@ fn main() {
                     options.user.clone(),
                     messages.clone(),
                 );
-                messages.push(chatgpt::Message {
+                messages.push(simple_chatgpt::Message {
                     role: Some(String::from("system")),
                     content: Some(reply),
                 });

@@ -1,4 +1,4 @@
-# chatgpt library and CLI for Rust
+# Simple ChatGPT library and CLI for Rust
 
 This project is the Rust chatgpt library, or a CLI tool that utilizes this library.
 

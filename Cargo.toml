@@ -1,12 +1,12 @@
 [package]
-name = "chatgpt"
+name = "simple-chatgpt"
 version = "0.1.0"
 authors = ["Satoshi Ogata <satosystems@gmail.com>"]
 edition = "2021"
 rust-version = "1.71.0"
-description = "This crate is a library for chatbot using ChatGPT and CLI tool using this library."
+description = "This crate is a simple ChatGPT library for chatbot and CLI tool using this library."
 readme = "README.md"
-repository = "https://github.com/satosystems/chatgpt/"
+repository = "https://github.com/satosystems/simple-chatgpt/"
 license-file = "LICENSE"
 keywords = ["chatbot", "chatgpt", "cli"]
 categories = ["ai", "chatbot", "cli"]
