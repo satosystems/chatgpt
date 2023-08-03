@@ -3,6 +3,7 @@ pub enum CallbackReason {
     Start,
     Data,
     End,
+    Error(String),
 }
 
 #[derive(Debug, PartialEq)]
@@ -189,7 +190,7 @@ pub async fn list_models(api_key: &str) -> Result<Vec<ModelList>, Error> {
 
 pub async fn completions<F>(api_key: &str, request_body: &RequestBody, f: F) -> Result<(), Error>
 where
-    F: Fn(CallbackReason, Completion),
+    F: Fn(CallbackReason, Option<Completion>),
 {
     hl::completions(&api_key, request_body, |data| {
         let is_debug = std::env::var("OPENAI_DEBUG").unwrap_or(String::from("")) != "";
@@ -206,12 +207,17 @@ where
                 }
                 let completion: Completion = serde_json::from_str(string_json).unwrap();
                 if completion.choices[0].delta.role == Some(String::from("assistant")) {
-                    f(CallbackReason::Start, completion);
+                    f(CallbackReason::Start, Some(completion));
                 } else if completion.choices[0].finish_reason == Some(String::from("stop")) {
-                    f(CallbackReason::End, completion);
+                    f(CallbackReason::End, Some(completion));
                 } else {
-                    f(CallbackReason::Data, completion);
+                    f(CallbackReason::Data, Some(completion));
                 }
+            } else {
+                if is_debug {
+                    eprintln!("{}", line);
+                }
+                f(CallbackReason::Error(String::from(line)), None);
             }
         });
     })
@@ -324,15 +330,21 @@ mod tests {
         let future = super::completions(&api_key, &request_body, |cr, completion| match cr {
             super::CallbackReason::Start => {
                 count_start.set(count_start.get() + 1);
-                assert_eq!(completion.choices.len(), 1);
+                assert!(completion.is_some());
+                assert_eq!(completion.unwrap().choices.len(), 1);
             }
             super::CallbackReason::Data => {
                 count_data.set(count_data.get() + 1);
-                assert_eq!(completion.choices.len(), 1);
+                assert!(completion.is_some());
+                assert_eq!(completion.unwrap().choices.len(), 1);
             }
             super::CallbackReason::End => {
                 count_end.set(count_end.get() + 1);
-                assert_eq!(completion.choices.len(), 1);
+                assert!(completion.is_some());
+                assert_eq!(completion.unwrap().choices.len(), 1);
+            }
+            super::CallbackReason::Error(_) => {
+                assert!(completion.is_none());
             }
         });
         let result = futures::executor::block_on(future);

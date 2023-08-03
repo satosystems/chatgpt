@@ -35,17 +35,28 @@ fn request(
         user,
     };
     let contents = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
-    let future = chatgpt::completions(&api_key, &request_body, |cr, completion| {
-        if cr == chatgpt::CallbackReason::Data {
+    let future = chatgpt::completions(&api_key, &request_body, |cr, completion| match cr {
+        chatgpt::CallbackReason::Start => {
+            // nothing to do
+        }
+        chatgpt::CallbackReason::Data => {
             let stdout = std::io::stdout();
             let mut handle = stdout.lock();
-            let content = completion.choices[0].delta.content.clone().unwrap();
+            let content = completion.unwrap().choices[0]
+                .delta
+                .content
+                .clone()
+                .unwrap();
             let bytes = content.as_bytes();
             std::io::Write::write_all(&mut handle, bytes).unwrap();
             std::io::Write::flush(&mut handle).unwrap();
             contents.borrow_mut().push_str(&content);
-        } else if cr == chatgpt::CallbackReason::End {
+        }
+        chatgpt::CallbackReason::End => {
             println!();
+        }
+        chatgpt::CallbackReason::Error(line) => {
+            eprintln!("{}", line);
         }
     });
     let result = futures::executor::block_on(future);
