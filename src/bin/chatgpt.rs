@@ -53,10 +53,13 @@ fn request(
             contents.borrow_mut().push_str(&content);
         }
         simple_chatgpt::CallbackReason::End => {
+            // nothing to do
+        }
+        simple_chatgpt::CallbackReason::Done => {
             println!();
         }
         simple_chatgpt::CallbackReason::Error(line) => {
-            eprintln!("{}", line);
+            eprintln!("Error: {}", line);
         }
     });
     let result = futures::executor::block_on(future);

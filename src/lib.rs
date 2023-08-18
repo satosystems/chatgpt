@@ -3,6 +3,7 @@ pub enum CallbackReason {
     Start,
     Data,
     End,
+    Done,
     Error(String),
 }
 
@@ -195,25 +196,29 @@ where
     hl::completions(&api_key, request_body, |data| {
         let is_debug = std::env::var("OPENAI_DEBUG").unwrap_or(String::from("")) != "";
         data.lines().for_each(|line| {
-            let prefix = "data: {";
+            let prefix = "data: ";
             let prefix_len = prefix.len();
             if line.starts_with(prefix) {
-                let string_json = match line.char_indices().nth(prefix_len - 1) {
-                    Some((i, _)) => &line[i..],
-                    None => "",
-                };
                 if is_debug {
-                    eprintln!("{}", string_json);
+                    eprintln!("{}", line);
                 }
-                let completion: Completion = serde_json::from_str(string_json).unwrap();
-                if completion.choices[0].delta.role == Some(String::from("assistant")) {
-                    f(CallbackReason::Start, Some(completion));
-                } else if completion.choices[0].finish_reason == Some(String::from("stop")) {
-                    f(CallbackReason::End, Some(completion));
+                if line == "data: [DONE]" {
+                    f(CallbackReason::Done, None);
                 } else {
-                    f(CallbackReason::Data, Some(completion));
+                    let string_json = match line.char_indices().nth(prefix_len) {
+                        Some((i, _)) => &line[i..],
+                        None => "",
+                    };
+                    let completion: Completion = serde_json::from_str(string_json).unwrap();
+                    if completion.choices[0].delta.role == Some(String::from("assistant")) {
+                        f(CallbackReason::Start, Some(completion));
+                    } else if completion.choices[0].finish_reason == Some(String::from("stop")) {
+                        f(CallbackReason::End, Some(completion));
+                    } else {
+                        f(CallbackReason::Data, Some(completion));
+                    }
                 }
-            } else {
+            } else if line != "" {
                 if is_debug {
                     eprintln!("{}", line);
                 }
@@ -342,6 +347,9 @@ mod tests {
                 count_end.set(count_end.get() + 1);
                 assert!(completion.is_some());
                 assert_eq!(completion.unwrap().choices.len(), 1);
+            }
+            super::CallbackReason::Done => {
+                assert!(completion.is_none());
             }
             super::CallbackReason::Error(_) => {
                 assert!(completion.is_none());
