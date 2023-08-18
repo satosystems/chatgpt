@@ -29,7 +29,7 @@ Define the `OPENAI_DEBUG=1` environment variable if you want to see what happens
 ### Installing
 
 ```shell-session
-$ cargo install --path .
+$ cargo install --force --path .
 ...
 $
 ```
